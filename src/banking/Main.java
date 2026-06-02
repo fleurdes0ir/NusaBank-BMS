@@ -64,21 +64,20 @@ public class Main extends Application {
      * @param primaryStage jendela utama yang disediakan JavaFX
      */
     @Override
-public void start(Stage primaryStage) {
-    // Setup window utama
+    public void start(Stage primaryStage) {
     primaryStage.setTitle("NusaBank — Banking Management System");
     primaryStage.setWidth(1100);
     primaryStage.setHeight(700);
     primaryStage.setMinWidth(900);
     primaryStage.setMinHeight(600);
 
-    // TODO: Uncomment setelah UI layer selesai
-    // banking.ui.SceneManager.getInstance().initialize(primaryStage);
-    // banking.ui.SceneManager.getInstance().showLogin();
+    // Inisialisasi SceneManager
+    banking.ui.SceneManager.getInstance().initialize(primaryStage);
 
-    // Tampilkan window sementara
+    // Tampilkan LoginScreen
+    banking.ui.SceneManager.getInstance().showLogin();
+
     primaryStage.show();
-
     System.out.println("NusaBank started successfully.");
 }
 
