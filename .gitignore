@@ -1,0 +1,14 @@
+# NetBeans build output
+nbproject/private/
+nbbuild/
+dist/
+nbdist/
+build/
+
+# Data CSV — di-generate otomatis saat runtime
+data/
+
+# OS artifacts
+.DS_Store
+*.swp
+*~
