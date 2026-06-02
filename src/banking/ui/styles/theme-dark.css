@@ -1,0 +1,309 @@
+/* =====================================================
+   NusaBank — Dark Theme
+   Semua warna didefinisikan sebagai CSS variable di :root
+   sehingga Light theme cukup override variabel yang sama.
+   ===================================================== */
+
+.root {
+    /* Background hierarchy — makin dalam makin terang */
+    -fx-base-bg:        #0f1117;
+    -fx-surface:        #1a1d27;
+    -fx-surface-2:      #22263a;
+    -fx-surface-3:      #2a2f45;
+
+    /* Accent — biru NusaBank */
+    -fx-accent:         #4f8ef7;
+    -fx-accent-hover:   #6ba3ff;
+    -fx-accent-muted:   #1e3a6e;
+
+    /* Text hierarchy */
+    -fx-text-primary:   #ffffff;
+    -fx-text-secondary: #8b92a5;
+    -fx-text-muted:     #555d74;
+
+    /* Status colors */
+    -fx-success:        #34d399;
+    -fx-success-muted:  #064e3b;
+    -fx-danger:         #f87171;
+    -fx-danger-muted:   #7f1d1d;
+    -fx-warning:        #fbbf24;
+    -fx-warning-muted:  #78350f;
+
+    /* Border */
+    -fx-border-color:   #2a2f45;
+    -fx-border-radius:  8px;
+
+    /* JavaFX base overrides */
+    -fx-background:     #0f1117;
+    -fx-control-inner-background: #22263a;
+    -fx-text-fill:      #ffffff;
+    -fx-font-family:    "Inter", "Segoe UI", "Arial", sans-serif;
+    -fx-font-size:      13px;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+    -fx-background-color: #1a1d27;
+    -fx-border-color: transparent #2a2f45 transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.sidebar-item {
+    -fx-background-color: transparent;
+    -fx-text-fill: #8b92a5;
+    -fx-font-size: 13px;
+    -fx-padding: 10 16 10 16;
+    -fx-cursor: hand;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-radius: 8px;
+}
+
+.sidebar-item:hover {
+    -fx-background-color: #22263a;
+    -fx-text-fill: #ffffff;
+}
+
+.sidebar-item-active {
+    -fx-background-color: #1e3a6e;
+    -fx-text-fill: #4f8ef7;
+    -fx-font-weight: bold;
+}
+
+/* ── Cards ── */
+.card {
+    -fx-background-color: #1a1d27;
+    -fx-background-radius: 12px;
+    -fx-border-color: #2a2f45;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-padding: 16px;
+}
+
+.card-stat {
+    -fx-background-color: #22263a;
+    -fx-background-radius: 12px;
+    -fx-border-color: #2a2f45;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-padding: 16px;
+}
+
+/* ── Buttons ── */
+.btn-primary {
+    -fx-background-color: #4f8ef7;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 8px;
+    -fx-padding: 8 20 8 20;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+}
+
+.btn-primary:hover {
+    -fx-background-color: #6ba3ff;
+}
+
+.btn-secondary {
+    -fx-background-color: #22263a;
+    -fx-text-fill: #8b92a5;
+    -fx-background-radius: 8px;
+    -fx-padding: 8 20 8 20;
+    -fx-cursor: hand;
+    -fx-border-color: #2a2f45;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+}
+
+.btn-secondary:hover {
+    -fx-background-color: #2a2f45;
+    -fx-text-fill: #ffffff;
+}
+
+.btn-danger {
+    -fx-background-color: transparent;
+    -fx-text-fill: #f87171;
+    -fx-background-radius: 8px;
+    -fx-padding: 8 20 8 20;
+    -fx-cursor: hand;
+    -fx-border-color: #f87171;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+}
+
+.btn-danger:hover {
+    -fx-background-color: #7f1d1d;
+}
+
+/* ── Text Fields ── */
+.text-field, .password-field, .combo-box {
+    -fx-background-color: #22263a;
+    -fx-text-fill: #ffffff;
+    -fx-prompt-text-fill: #555d74;
+    -fx-border-color: #2a2f45;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 8 12 8 12;
+    -fx-border-width: 1px;
+}
+
+.text-field:focused, .password-field:focused {
+    -fx-border-color: #4f8ef7;
+}
+
+/* ── Table ── */
+.table-view {
+    -fx-background-color: #1a1d27;
+    -fx-border-color: #2a2f45;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+}
+
+.table-view .column-header {
+    -fx-background-color: #22263a;
+    -fx-text-fill: #8b92a5;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: #1a1d27;
+    -fx-border-color: transparent transparent #22263a transparent;
+    -fx-border-width: 1px;
+    -fx-text-fill: #ffffff;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: #22263a;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: #1e3a6e;
+}
+
+/* ── Labels ── */
+.label-title {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.label-subtitle {
+    -fx-text-fill: #8b92a5;
+    -fx-font-size: 13px;
+}
+
+.label-section {
+    -fx-text-fill: #8b92a5;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.label-amount-large {
+    -fx-text-fill: #ffffff;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+
+.label-amount-positive {
+    -fx-text-fill: #34d399;
+    -fx-font-weight: bold;
+}
+
+.label-amount-negative {
+    -fx-text-fill: #f87171;
+    -fx-font-weight: bold;
+}
+
+/* ── Avatar ── */
+.avatar {
+    -fx-background-color: #4f8ef7;
+    -fx-background-radius: 50%;
+    -fx-text-fill: #ffffff;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+}
+
+/* ── Status Badge ── */
+.badge-active {
+    -fx-background-color: #064e3b;
+    -fx-text-fill: #34d399;
+    -fx-background-radius: 20px;
+    -fx-padding: 2 10 2 10;
+    -fx-font-size: 11px;
+}
+
+.badge-inactive {
+    -fx-background-color: #374151;
+    -fx-text-fill: #9ca3af;
+    -fx-background-radius: 20px;
+    -fx-padding: 2 10 2 10;
+    -fx-font-size: 11px;
+}
+
+/* ── Separator ── */
+.separator .line {
+    -fx-border-color: #2a2f45;
+}
+
+/* ── ScrollPane ── */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+/* ── Top Bar ── */
+.topbar {
+    -fx-background-color: #1a1d27;
+    -fx-border-color: transparent transparent #2a2f45 transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0 16 0 16;
+}
+
+/* ── Login Screen ── */
+.login-container {
+    -fx-background-color: #0f1117;
+}
+
+.login-card {
+    -fx-background-color: #1a1d27;
+    -fx-background-radius: 16px;
+    -fx-border-color: #2a2f45;
+    -fx-border-radius: 16px;
+    -fx-border-width: 1px;
+    -fx-padding: 40px;
+}
+
+/* ── Quick Action Button ── */
+.btn-action {
+    -fx-background-color: #22263a;
+    -fx-text-fill: #ffffff;
+    -fx-background-radius: 12px;
+    -fx-border-color: #2a2f45;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-padding: 12 16 12 16;
+    -fx-cursor: hand;
+    -fx-alignment: center;
+}
+
+.btn-action:hover {
+    -fx-background-color: #2a2f45;
+    -fx-border-color: #4f8ef7;
+}
+
+/* ── Transaction Item ── */
+.transaction-item {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent transparent #22263a transparent;
+    -fx-border-width: 1px;
+    -fx-padding: 10 0 10 0;
+}
+
+.transaction-item:hover {
+    -fx-background-color: #22263a;
+    -fx-background-radius: 8px;
+}
