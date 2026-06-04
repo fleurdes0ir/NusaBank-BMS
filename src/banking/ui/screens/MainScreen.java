@@ -51,23 +51,11 @@ public class MainScreen {
             root.setCenter(contentArea);
             BorderPane.setMargin(contentArea, new Insets(16, 16, 16, 16));
 
-            // TODO: Uncomment setelah DashboardPanel selesai
-            // showPanel(new banking.ui.panels.DashboardPanel());
-
-            // Placeholder sementara
-            Label placeholder = new Label("Panels sedang dibangun...");
-            placeholder.getStyleClass().add("label-subtitle");
-            contentArea.getChildren().add(placeholder);
-
+            showPanel(new banking.ui.panels.DashboardPanel().getRoot());
+            
         } else {
-            // TODO: Uncomment setelah NasabahPanel selesai
-            // root.setCenter(
-            //     new banking.ui.panels.NasabahPanel().getRoot());
-
-            Label placeholder = new Label("Nasabah Panel sedang dibangun...");
-            placeholder.getStyleClass().add("label-subtitle");
-            placeholder.setAlignment(Pos.CENTER);
-            root.setCenter(placeholder);
+            
+            root.setCenter(new banking.ui.panels.NasabahPanel().getRoot());
         }
 
         return new Scene(root, 1100, 700);
@@ -141,25 +129,26 @@ public class MainScreen {
 
         setActiveButton(dashboardBtn);
 
-        // TODO: Uncomment setelah panel selesai dibuat
         dashboardBtn.setOnAction(e -> {
-            // showPanel(new banking.ui.panels.DashboardPanel());
+            showPanel(new banking.ui.panels.DashboardPanel().getRoot());
             setActiveButton(dashboardBtn);
         });
+            
         customerBtn.setOnAction(e -> {
-            // showPanel(new banking.ui.panels.CustomerPanel());
+            showPanel(new banking.ui.panels.CustomerPanel().getRoot());
             setActiveButton(customerBtn);
         });
+        
         accountBtn.setOnAction(e -> {
-            // showPanel(new banking.ui.panels.AccountPanel());
+            showPanel(new banking.ui.panels.AccountPanel().getRoot());
             setActiveButton(accountBtn);
         });
         transactionBtn.setOnAction(e -> {
-            // showPanel(new banking.ui.panels.TransactionPanel());
+            showPanel(new banking.ui.panels.TransactionPanel().getRoot());
             setActiveButton(transactionBtn);
         });
         loanBtn.setOnAction(e -> {
-            // showPanel(new banking.ui.panels.LoanPanel());
+            showPanel(new banking.ui.panels.LoanPanel().getRoot());
             setActiveButton(loanBtn);
         });
 
