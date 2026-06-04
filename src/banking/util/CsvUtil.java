@@ -56,7 +56,7 @@ public class CsvUtil {
                     // split dengan limit -1 agar trailing empty string ikut masuk
                     // Contoh: "A001,C001,,data" → ["A001","C001","","data"]
                     // Tanpa -1, field kosong di akhir akan terpotong
-                    result.add(line.split(",", -1));
+                    result.add(parseCsvLine(line));
                 }
             }
         } catch (IOException e) {
@@ -141,5 +141,70 @@ public class CsvUtil {
         // %03d = integer minimum 3 digit, dipadding nol di depan
         // Contoh: 1 → "001", 12 → "012", 123 → "123"
         return prefix + String.format("%03d", number);
+    }
+    
+        /**
+     * Parse satu baris CSV yang field-nya bisa mengandung koma.
+     * Field yang mengandung koma dibungkus tanda kutip ganda.
+     *
+     * Contoh input : C001,Budi,budi@mail.com,081234,"Jl. Sudirman, Jakarta",2024-01-15
+     * Contoh output: ["C001","Budi","budi@mail.com","081234","Jl. Sudirman, Jakarta","2024-01-15"]
+     *
+     * Algoritma: iterasi karakter satu per satu, track apakah
+     * sedang di dalam quoted field atau tidak.
+     *
+     * @param line satu baris CSV
+     * @return array String per field
+     */
+    public static String[] parseCsvLine(String line) {
+        java.util.List<String> fields = new java.util.ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+
+            if (c == '"') {
+                // Toggle status inQuotes
+                // Double quote "" di dalam quoted field = escape
+                if (inQuotes && i + 1 < line.length()
+                        && line.charAt(i + 1) == '"') {
+                    // Escaped quote — tambah satu kutip ke current
+                    current.append('"');
+                    i++; // skip karakter berikutnya
+                } else {
+                    inQuotes = !inQuotes;
+                }
+            } else if (c == ',' && !inQuotes) {
+                // Koma di luar quotes = pemisah field
+                fields.add(current.toString().trim());
+                current.setLength(0); // reset buffer
+            } else {
+                current.append(c);
+            }
+        }
+        // Tambah field terakhir
+        fields.add(current.toString().trim());
+        return fields.toArray(new String[0]);
+    }
+
+    /**
+     * Bungkus nilai field dengan tanda kutip jika mengandung koma.
+     * Dipakai saat menulis CSV agar field dengan koma tidak merusak format.
+     *
+     * Contoh: "Jl. Sudirman, Jakarta" → "\"Jl. Sudirman, Jakarta\""
+     *
+     * @param value nilai field yang akan ditulis
+     * @return nilai yang sudah di-escape jika perlu
+     */
+    public static String escapeCsvField(String value) {
+        if (value == null) return "";
+        // Jika mengandung koma atau kutip, bungkus dengan kutip ganda
+        if (value.contains(",") || value.contains("\"")
+                || value.contains("\n")) {
+            // Escape kutip ganda di dalam value dengan double quote
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 }

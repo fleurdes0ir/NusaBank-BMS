@@ -4,6 +4,8 @@
  */
 package banking.model;
 
+import banking.util.CsvUtil;
+
 public class Customer {
     private String customerId;
     private String fullName;
@@ -45,7 +47,13 @@ public class Customer {
 
     @Override
     public String toString() {
-        return customerId + "," + fullName + "," + email + ","
-             + phone + "," + address + "," + joinDate;
+        // escapeCsvField dipakai untuk address karena bisa mengandung koma
+        // Contoh: "Jl. Sudirman No. 12, Jakarta" → dibungkus kutip di CSV
+        return customerId + ","
+             + CsvUtil.escapeCsvField(fullName) + ","
+             + CsvUtil.escapeCsvField(email) + ","
+             + CsvUtil.escapeCsvField(phone) + ","
+             + CsvUtil.escapeCsvField(address) + ","
+             + joinDate;
     }
 }
