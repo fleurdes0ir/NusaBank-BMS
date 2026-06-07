@@ -172,6 +172,15 @@ public class LoanRepository {
     }
 
     /**
+ * Menghitung total pinjaman yang tersimpan.
+ *
+ * @return jumlah pinjaman
+ */
+    public int count() {
+        return findAll().size();
+    }
+    
+    /**
      * Helper private — tulis List<Loan> ke file CSV.
      *
      * @param loans List Loan yang akan ditulis
