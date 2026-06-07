@@ -12,3 +12,17 @@ data/
 .DS_Store
 *.swp
 *~
+
+# NetBeans project properties (contains local paths)
+nbproject/project.properties
+nbproject/project.properties.backup
+
+# Backup files
+*.backup
+
+# NetBeans project properties (contains local paths)
+nbproject/project.properties
+nbproject/project.properties.backup
+
+# Backup files
+*.backup
