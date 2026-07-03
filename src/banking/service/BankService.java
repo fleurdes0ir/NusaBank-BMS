@@ -6,6 +6,7 @@ package banking.service;
 
 import banking.model.*;
 import banking.model.enums.*;
+import banking.model.enums.LoanType;
 import banking.repository.*;
 import banking.util.CsvUtil;
 import java.time.LocalDate;
@@ -474,38 +475,41 @@ public class BankService {
      * @throws IllegalArgumentException jika Customer tidak ditemukan
      */
     public Loan applyLoan(String customerId, double principal,
-            int tenorMonths, String description) {
+        int tenorMonths, String description) {
 
-        Customer customer = customerRepository.findById(customerId);
-        if (customer == null) {
-            throw new IllegalArgumentException(
-                    "Customer tidak ditemukan: " + customerId);
-        }
+    Customer customer = customerRepository.findById(customerId);
+    if (customer == null)
+        throw new IllegalArgumentException(
+                "Customer tidak ditemukan: " + customerId);
 
-        if (principal <= 0) {
-            throw new IllegalArgumentException(
-                    "Jumlah pinjaman harus lebih dari 0.");
-        }
+    if (principal <= 0)
+        throw new IllegalArgumentException(
+                "Jumlah pinjaman harus lebih dari 0.");
 
-        if (tenorMonths <= 0) {
-            throw new IllegalArgumentException(
-                    "Tenor harus lebih dari 0 bulan.");
-        }
+    if (tenorMonths <= 0)
+        throw new IllegalArgumentException(
+                "Tenor harus lebih dari 0 bulan.");
 
-        String loanId = CsvUtil.generateId("L",
-                loanRepository.count() + 1);
-        String today = LocalDate.now().format(DATE_FORMAT);
+    String loanId = CsvUtil.generateId("L",
+            loanRepository.count() + 1);
+    String today = LocalDate.now().format(DATE_FORMAT);
 
-        // Kalkulasi cicilan flat rate
-        double monthlyPayment = principal / tenorMonths;
+    double monthlyPayment = principal / tenorMonths;
 
-        Loan loan = new Loan(loanId, customerId, principal,
-                monthlyPayment, tenorMonths, 0,
-                LoanStatus.ACTIVE, today, description);
+    Loan loan = new Loan(
+        loanId, customerId, principal,
+        monthlyPayment, tenorMonths, 0,
+        LoanStatus.PENDING,
+        today, description,
+        12.0,
+        LoanType.FLAT,
+        monthlyPayment * tenorMonths,
+        "", "", ""
+    );
 
-        loanRepository.save(loan);
-        return loan;
-    }
+    loanRepository.save(loan);
+    return loan;
+}  // ← pastikan kurung kurawal penutup ini ada
 
     /**
      * Mengambil semua pinjaman milik satu Customer.
@@ -513,6 +517,7 @@ public class BankService {
      * @param customerId ID Customer
      * @return List pinjaman
      */
+    
     public List<Loan> getLoansByCustomerId(String customerId) {
         return loanRepository.findByCustomerId(customerId);
     }

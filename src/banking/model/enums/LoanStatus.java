@@ -5,9 +5,10 @@
 package banking.model.enums;
 
 public enum LoanStatus {
+    PENDING("Menunggu Persetujuan"),
     ACTIVE("Aktif"),
-    PAID("Lunas"),
-    PENDING("Pending");
+    REJECTED("Ditolak"),
+    PAID("Lunas");
 
     private final String displayName;
 
@@ -15,12 +16,8 @@ public enum LoanStatus {
         this.displayName = displayName;
     }
 
-    public String getDisplayName() {
-        return displayName;
-    }
+    public String getDisplayName() { return displayName; }
 
     @Override
-    public String toString() {
-        return displayName;
-    }
+    public String toString() { return displayName; }
 }
