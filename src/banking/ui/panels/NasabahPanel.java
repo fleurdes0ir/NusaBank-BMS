@@ -23,7 +23,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.TextField;
 /**
  * NasabahPanel adalah panel utama untuk role CUSTOMER.
  *
@@ -553,8 +554,8 @@ public class NasabahPanel {
                     bankService.deposit(accountId, amount);
                     showAlert(Alert.AlertType.INFORMATION,
                         "Berhasil",
-                        "Deposit berhasil: " + CURRENCY.format(amount)
-                        + "\n\nRefresh halaman untuk melihat perubahan.");
+                        "Deposit berhasil: Rp "
+                        + String.format("%,.0f", amount));
                 } catch (Exception ex) {
                     showAlert(Alert.AlertType.ERROR,
                         "Error", ex.getMessage());
@@ -591,34 +592,31 @@ public class NasabahPanel {
                     bankService.withdraw(accountId, amount);
                     showAlert(Alert.AlertType.INFORMATION,
                         "Berhasil",
-                        "Penarikan berhasil: "
-                        + CURRENCY.format(amount));
+                        "Penarikan berhasil: Rp "
+                        + String.format("%,.0f", amount));
                 } catch (Exception ex) {
                     showAlert(Alert.AlertType.ERROR,
                         "Error", ex.getMessage());
                 }
             }
         });
-    }
-
+}
+    
     private void showTransferDialog() {
         Dialog<ButtonType> dialog = new Dialog<>();
         dialog.setTitle("Transfer");
         dialog.setHeaderText("Transfer dari rekening Anda");
 
+        // DEKLARASI VARIABEL DI DALAM METODE (Scope lokal yang benar)
         ComboBox<String> sourceCombo = buildMyAccountCombo();
-
-        // Target combo — semua rekening di sistem
         ComboBox<String> targetCombo = new ComboBox<>();
         targetCombo.setPrefHeight(36);
         targetCombo.setMaxWidth(Double.MAX_VALUE);
+        
         bankService.getAllAccounts().forEach(a -> {
-            Customer c = bankService.getCustomerById(
-                    a.getCustomerId());
-            String name = c != null
-                    ? c.getFullName() : a.getCustomerId();
-            targetCombo.getItems().add(
-                a.getAccountId() + " - " + name
+            Customer c = bankService.getCustomerById(a.getCustomerId());
+            String name = c != null ? c.getFullName() : a.getCustomerId();
+            targetCombo.getItems().add(a.getAccountId() + " - " + name
                 + " (" + a.getAccountType().getDisplayName() + ")");
         });
         if (!targetCombo.getItems().isEmpty())
@@ -634,109 +632,151 @@ public class NasabahPanel {
             "Jumlah (Rp)", amountField);
 
         dialog.getDialogPane().setContent(form);
-        dialog.getDialogPane().getButtonTypes().addAll(
-            ButtonType.OK, ButtonType.CANCEL);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         dialog.showAndWait().ifPresent(result -> {
             if (result == ButtonType.OK) {
                 try {
-                    String sourceId = extractAccountId(
-                        sourceCombo.getSelectionModel()
-                            .getSelectedItem());
-                    String targetId = extractAccountId(
-                        targetCombo.getSelectionModel()
-                            .getSelectedItem());
-                    double amount = Double.parseDouble(
-                        amountField.getText().trim());
+                    // PANGGIL VARIABEL YANG SUDAH DIDEKLARASIKAN DI ATAS
+                    String sourceId = extractAccountId(sourceCombo.getSelectionModel().getSelectedItem());
+                    String targetId = extractAccountId(targetCombo.getSelectionModel().getSelectedItem());
+                    double amount = Double.parseDouble(amountField.getText().trim());
 
-                    if (sourceId.equals(targetId)) {
-                        showAlert(Alert.AlertType.ERROR, "Error",
-                            "Rekening sumber dan tujuan tidak boleh sama.");
+                    if (sourceId == null || targetId == null || sourceId.equals(targetId)) {
+                        showAlert(Alert.AlertType.ERROR, "Error", "Rekening sumber/tujuan tidak valid atau sama.");
                         return;
                     }
 
                     bankService.transfer(sourceId, targetId, amount);
-                    showAlert(Alert.AlertType.INFORMATION,
-                        "Berhasil",
-                        "Transfer berhasil: "
-                        + CURRENCY.format(amount));
+                    showAlert(Alert.AlertType.INFORMATION, "Berhasil", "Transfer berhasil: " + CURRENCY.format(amount));
+                    
+                    // Refresh tampilan agar saldo terupdate
+                    banking.ui.SceneManager.getInstance().showMain();
+                    
                 } catch (Exception ex) {
-                    showAlert(Alert.AlertType.ERROR,
-                        "Error", ex.getMessage());
+                    showAlert(Alert.AlertType.ERROR, "Error", ex.getMessage());
                 }
             }
         });
     }
+
+
 
     private void showLoanDialog() {
-        Dialog<ButtonType> dialog = new Dialog<>();
-        dialog.setTitle("Ajukan Pinjaman");
-        dialog.setHeaderText("Pengajuan pinjaman atas nama: "
-                + customer.getFullName());
+            Dialog<ButtonType> dialog = new Dialog<>();
+            dialog.setTitle("Ajukan Pinjaman");
+            dialog.setHeaderText("Pengajuan pinjaman atas nama: "
+                    + customer.getFullName());
 
-        TextField principalField = new TextField();
-        principalField.setPromptText("Contoh: 10000000");
-        principalField.setPrefHeight(36);
+            // ── Form fields ──
+            TextField principalField = new TextField();
+            principalField.setPromptText("Contoh: 10000000");
+            principalField.setPrefHeight(36);
 
-        TextField tenorField = new TextField();
-        tenorField.setPromptText("Contoh: 12");
-        tenorField.setPrefHeight(36);
+            TextField tenorField = new TextField();
+            tenorField.setPromptText("Contoh: 12");
+            tenorField.setPrefHeight(36);
 
-        TextField descField = new TextField("Pinjaman Personal");
-        descField.setPrefHeight(36);
+            TextField rateField = new TextField("12");
+            rateField.setPrefHeight(36);
 
-        Label previewLabel = new Label("Cicilan/bulan: -");
-        previewLabel.setStyle(
-            "-fx-font-size: 14px; -fx-font-weight: bold; " +
-            "-fx-text-fill: #4f8ef7;");
+            ComboBox<String> loanTypeCombo = new ComboBox<>();
+            loanTypeCombo.getItems().addAll("Flat Rate", "Anuitas");
+            loanTypeCombo.getSelectionModel().selectFirst();
+            loanTypeCombo.setPrefHeight(36);
+            loanTypeCombo.setMaxWidth(Double.MAX_VALUE);
 
-        javafx.beans.value.ChangeListener<String> updater =
-                (obs, o, n) -> {
-            try {
-                double p = Double.parseDouble(
-                    principalField.getText().trim());
-                int t = Integer.parseInt(
-                    tenorField.getText().trim());
-                previewLabel.setText("Cicilan/bulan: "
-                    + CURRENCY.format(
-                        bankService.calculateMonthlyPayment(p, t)));
-            } catch (NumberFormatException ex) {
-                previewLabel.setText("Cicilan/bulan: -");
-            }
-        };
+            TextField descField = new TextField("Pinjaman Personal");
+            descField.setPrefHeight(36);
 
-        principalField.textProperty().addListener(updater);
-        tenorField.textProperty().addListener(updater);
+            // ── Preview label ──
+            Label previewLabel = new Label("Cicilan/bulan: -");
+            previewLabel.setStyle(
+                "-fx-font-size: 13px; -fx-font-weight: bold; " +
+                "-fx-text-fill: #4f8ef7;");
 
-        VBox form = buildSimpleForm(
-            "Jumlah Pinjaman (Rp)", principalField,
-            "Tenor (bulan)",        tenorField,
-            "Keterangan",           descField);
-        form.getChildren().addAll(new Separator(), previewLabel);
-
-        dialog.getDialogPane().setContent(form);
-        dialog.getDialogPane().getButtonTypes().addAll(
-            ButtonType.OK, ButtonType.CANCEL);
-
-        dialog.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK) {
+            // ── Preview updater ──
+            javafx.beans.value.ChangeListener<String> updater =
+                    (obs, o, n) -> {
                 try {
-                    double principal = Double.parseDouble(
+                    double p = Double.parseDouble(
                         principalField.getText().trim());
-                    int tenor = Integer.parseInt(
+                    int t = Integer.parseInt(
                         tenorField.getText().trim());
-                    bankService.applyLoan(customer.getCustomerId(),
-                        principal, tenor, descField.getText().trim());
-                    showAlert(Alert.AlertType.INFORMATION,
-                        "Berhasil", "Pinjaman berhasil diajukan.");
-                } catch (Exception ex) {
-                    showAlert(Alert.AlertType.ERROR,
-                        "Error", ex.getMessage());
-                }
-            }
-        });
-    }
+                    double r = Double.parseDouble(
+                        rateField.getText().trim());
+                    banking.model.enums.LoanType lt =
+                        loanTypeCombo.getValue().equals("Anuitas")
+                        ? banking.model.enums.LoanType.ANNUITY
+                        : banking.model.enums.LoanType.FLAT;
 
+                    double monthly  = bankService.calculateMonthlyPayment(
+                            lt, p, r, t);
+                    double total    = banking.util.LoanCalculator
+                            .calculateTotalPayment(lt, p, r, t);
+                    double interest = total - p;
+
+                    previewLabel.setText(
+                        "Cicilan/bulan : Rp " + String.format("%,.0f", monthly)
+                        + "\nTotal bayar  : Rp " + String.format("%,.0f", total)
+                        + "\nTotal bunga  : Rp " + String.format("%,.0f", interest)
+                    );
+                } catch (NumberFormatException ex) {
+                    previewLabel.setText("Cicilan/bulan: -");
+                }
+            };
+
+            principalField.textProperty().addListener(updater);
+            tenorField.textProperty().addListener(updater);
+            rateField.textProperty().addListener(updater);
+            loanTypeCombo.valueProperty().addListener(
+                    (obs, o, n) -> updater.changed(null, null, null));
+
+            // ── Build form ──
+            VBox form = buildSimpleForm(
+                "Jumlah Pinjaman (Rp)", principalField,
+                "Tenor (bulan)",        tenorField,
+                "Suku Bunga (% / thn)", rateField,
+                "Metode Bunga",         loanTypeCombo,
+                "Keterangan",           descField);
+            form.getChildren().addAll(new Separator(), previewLabel);
+
+            dialog.getDialogPane().setContent(form);
+            dialog.getDialogPane().getButtonTypes().addAll(
+                ButtonType.OK, ButtonType.CANCEL);
+
+            // ── Submit handler ──
+            dialog.showAndWait().ifPresent(result -> {
+                if (result == ButtonType.OK) {
+                    try {
+                        double principal = Double.parseDouble(
+                            principalField.getText().trim());
+                        int tenor = Integer.parseInt(
+                            tenorField.getText().trim());
+                        double rateValue = Double.parseDouble(
+                            rateField.getText().trim());
+                        banking.model.enums.LoanType selectedLoanType =
+                            loanTypeCombo.getValue().equals("Anuitas")
+                            ? banking.model.enums.LoanType.ANNUITY
+                            : banking.model.enums.LoanType.FLAT;
+
+                        bankService.applyLoan(
+                            customer.getCustomerId(),
+                            principal, tenor,
+                            descField.getText().trim(),
+                            rateValue, selectedLoanType);
+
+                        showAlert(Alert.AlertType.INFORMATION,
+                            "Berhasil",
+                            "Pinjaman berhasil diajukan dan "
+                            + "menunggu persetujuan admin.");
+                    } catch (Exception ex) {
+                        showAlert(Alert.AlertType.ERROR,
+                            "Error", ex.getMessage());
+                    }
+                }
+            });
+        }
     /**
      * Helper — buat form VBox dari pasangan label-control.
      */
