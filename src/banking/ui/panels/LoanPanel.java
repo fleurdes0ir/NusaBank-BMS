@@ -173,20 +173,39 @@ public class LoanPanel {
                 data.getValue().getDescription()));
 
         // Kolom Aksi — tombol Lunas
-        TableColumn<Loan, Void> actionCol =
-                new TableColumn<>("Aksi");
-        actionCol.setPrefWidth(100);
+        // Kolom Aksi — Tombol Manajemen Admin (Approve / Reject / Lunas)
+        TableColumn<Loan, Void> actionCol = new TableColumn<>("Aksi");
+        actionCol.setPrefWidth(180); // Diperlebar agar muat 2 tombol sejajar
         actionCol.setCellFactory(col -> new TableCell<>() {
+            private final Button approveBtn = new Button("Setujui");
+            private final Button rejectBtn = new Button("Tolak");
             private final Button paidBtn = new Button("Tandai Lunas");
+            private final HBox container = new HBox(6);
+
             {
+                // Styling tombol-tombol Admin
+                approveBtn.getStyleClass().add("btn-primary");
+                approveBtn.setStyle("-fx-font-size: 11px; -fx-padding: 4 8 4 8; -fx-background-color: #10b981;");
+                approveBtn.setOnAction(e -> {
+                    Loan loan = getTableView().getItems().get(getIndex());
+                    processLoanApproval(loan, true);
+                });
+
+                rejectBtn.getStyleClass().add("btn-secondary");
+                rejectBtn.setStyle("-fx-font-size: 11px; -fx-padding: 4 8 4 8; -fx-background-color: #ef4444; -fx-text-fill: white;");
+                rejectBtn.setOnAction(e -> {
+                    Loan loan = getTableView().getItems().get(getIndex());
+                    processLoanApproval(loan, false);
+                });
+
                 paidBtn.getStyleClass().add("btn-secondary");
-                paidBtn.setStyle(
-                    "-fx-font-size: 11px; -fx-padding: 4 8 4 8;");
+                paidBtn.setStyle("-fx-font-size: 11px; -fx-padding: 4 8 4 8;");
                 paidBtn.setOnAction(e -> {
-                    Loan loan = getTableView()
-                            .getItems().get(getIndex());
+                    Loan loan = getTableView().getItems().get(getIndex());
                     markAsPaid(loan);
                 });
+                
+                container.setAlignment(Pos.CENTER);
             }
 
             @Override
@@ -196,11 +215,23 @@ public class LoanPanel {
                     setGraphic(null);
                     return;
                 }
-                // Tampilkan tombol hanya jika status ACTIVE
-                Loan loan = getTableView()
-                        .getItems().get(getIndex());
-                setGraphic(loan.getStatus() == LoanStatus.ACTIVE
-                    ? paidBtn : null);
+
+                Loan loan = getTableView().getItems().get(getIndex());
+                container.getChildren().clear();
+
+                // Kondisi Percabangan Tombol Berdasarkan Status Pinjaman
+                if (loan.getStatus() == LoanStatus.PENDING) {
+                    // Jika PENDING, Admin bisa Approve atau Reject
+                    container.getChildren().addAll(approveBtn, rejectBtn);
+                    setGraphic(container);
+                } else if (loan.getStatus() == LoanStatus.ACTIVE) {
+                    // Jika ACTIVE, tampilkan tombol Tandai Lunas
+                    container.getChildren().add(paidBtn);
+                    setGraphic(container);
+                } else {
+                    // Jika REJECTED atau PAID, tidak butuh aksi lagi
+                    setGraphic(null);
+                }
             }
         });
 
@@ -272,6 +303,17 @@ public class LoanPanel {
         TextField descField = new TextField("Pinjaman Personal");
         descField.setPrefHeight(36);
 
+        // Rate field
+        TextField rateField = new TextField("12");
+        rateField.setPrefHeight(36);
+
+        // LoanType combo
+        ComboBox<String> loanTypeCombo = new ComboBox<>();
+        loanTypeCombo.getItems().addAll("Flat Rate", "Anuitas");
+        loanTypeCombo.getSelectionModel().selectFirst();
+        loanTypeCombo.setPrefHeight(36);
+        loanTypeCombo.setMaxWidth(Double.MAX_VALUE);
+        
         // Preview cicilan — update realtime
         // Label ini di-update oleh ChangeListener
         Label previewLabel = new Label("Cicilan/bulan: -");
@@ -282,21 +324,40 @@ public class LoanPanel {
         // ChangeListener untuk update preview cicilan
         // Dipanggil setiap kali nilai principal atau tenor berubah
         javafx.beans.value.ChangeListener<String> previewUpdater =
-                (obs, oldVal, newVal) -> {
+                (obs, o, n) -> {
             try {
-                double principal = Double.parseDouble(
+                double p = Double.parseDouble(
                     principalField.getText().trim());
-                int tenor = Integer.parseInt(
+                int t = Integer.parseInt(
                     tenorField.getText().trim());
-                double monthly = bankService
-                        .calculateMonthlyPayment(principal, tenor);
+                double r = Double.parseDouble(
+                    rateField.getText().trim());
+                banking.model.enums.LoanType lt =
+                    loanTypeCombo.getValue().equals("Anuitas")
+                    ? banking.model.enums.LoanType.ANNUITY
+                    : banking.model.enums.LoanType.FLAT;
+
+                double monthly = bankService.calculateMonthlyPayment(
+                    lt, p, r, t);
+                double total   = banking.util.LoanCalculator
+                        .calculateTotalPayment(lt, p, r, t);
+                double interest = total - p;
+
                 previewLabel.setText(
-                    "Cicilan/bulan: " + CURRENCY.format(monthly));
+                    "Cicilan/bulan : Rp " + String.format("%,.0f", monthly)
+                    + "\nTotal bayar  : Rp " + String.format("%,.0f", total)
+                    + "\nTotal bunga  : Rp " + String.format("%,.0f", interest)
+                );
             } catch (NumberFormatException ex) {
-                // Input belum lengkap — reset preview
                 previewLabel.setText("Cicilan/bulan: -");
             }
         };
+
+        principalField.textProperty().addListener(previewUpdater);
+        tenorField.textProperty().addListener(previewUpdater);
+        rateField.textProperty().addListener(previewUpdater);
+        loanTypeCombo.valueProperty().addListener(
+                (obs, o, n) -> previewUpdater.changed(null, null, null));
 
         // Attach listener ke kedua field
         principalField.textProperty().addListener(previewUpdater);
@@ -310,21 +371,27 @@ public class LoanPanel {
         Label prcpLabel  = new Label("Jumlah Pinjaman (Rp)");
         Label tenorLabel = new Label("Tenor (bulan)");
         Label descLabel  = new Label("Keterangan");
+        Label rateLabel     = new Label("Suku Bunga (% per tahun)");
+        Label loanTypeLabel = new Label("Metode Bunga");
         custLabel.getStyleClass().add("label-subtitle");
         prcpLabel.getStyleClass().add("label-subtitle");
         tenorLabel.getStyleClass().add("label-subtitle");
         descLabel.getStyleClass().add("label-subtitle");
+        rateLabel.getStyleClass().add("label-subtitle");
+        loanTypeLabel.getStyleClass().add("label-subtitle");
 
         // Separator visual sebelum preview
         Separator sep = new Separator();
 
         form.getChildren().addAll(
-            custLabel,  customerCombo,
-            prcpLabel,  principalField,
-            tenorLabel, tenorField,
-            descLabel,  descField,
-            sep,        previewLabel
-        );
+        custLabel,      customerCombo,
+        prcpLabel,      principalField,
+        tenorLabel,     tenorField,
+        rateLabel,      rateField,
+        loanTypeLabel,  loanTypeCombo,
+        descLabel,      descField,
+        sep,            previewLabel
+    );
 
         dialog.getDialogPane().setContent(form);
         dialog.getDialogPane().getButtonTypes().addAll(
@@ -333,39 +400,45 @@ public class LoanPanel {
             table.getScene().getStylesheets());
 
         dialog.showAndWait().ifPresent(result -> {
-            if (result == ButtonType.OK) {
-                try {
-                    String selected = customerCombo
-                            .getSelectionModel().getSelectedItem();
-                    if (selected == null) {
-                        showAlert(Alert.AlertType.ERROR,
-                            "Error", "Pilih nasabah terlebih dahulu.");
-                        return;
-                    }
-                    String customerId = selected.split(" - ")[0];
-                    double principal = Double.parseDouble(
-                        principalField.getText().trim());
-                    int tenor = Integer.parseInt(
-                        tenorField.getText().trim());
-                    String desc = descField.getText().trim();
-
-                    bankService.applyLoan(
-                        customerId, principal, tenor, desc);
-                    refreshData();
-                    showAlert(Alert.AlertType.INFORMATION,
-                        "Berhasil", "Pinjaman berhasil diajukan.");
-
-                } catch (NumberFormatException ex) {
+        if (result == ButtonType.OK) {
+            try {
+                String selected = customerCombo
+                        .getSelectionModel().getSelectedItem();
+                if (selected == null) {
                     showAlert(Alert.AlertType.ERROR,
-                        "Error", "Nominal atau tenor tidak valid.");
-                } catch (Exception ex) {
-                    showAlert(Alert.AlertType.ERROR,
-                        "Error", ex.getMessage());
+                        "Error", "Pilih nasabah terlebih dahulu.");
+                    return;
                 }
-            }
-        });
-    }
+                String customerId = selected.split(" - ")[0];
+                double principal  = Double.parseDouble(
+                    principalField.getText().trim());
+                int tenor         = Integer.parseInt(
+                    tenorField.getText().trim());
+                double rateValue  = Double.parseDouble(
+                    rateField.getText().trim());
+                banking.model.enums.LoanType selectedLoanType =
+                    loanTypeCombo.getValue().equals("Anuitas")
+                    ? banking.model.enums.LoanType.ANNUITY
+                    : banking.model.enums.LoanType.FLAT;
+                String desc = descField.getText().trim();
 
+                bankService.applyLoan(customerId, principal,
+                    tenor, desc, rateValue, selectedLoanType);
+                refreshData();
+                showAlert(Alert.AlertType.INFORMATION,
+                    "Berhasil", "Pinjaman berhasil diajukan.");
+
+            } catch (NumberFormatException ex) {
+                showAlert(Alert.AlertType.ERROR,
+                    "Error", "Nominal atau tenor tidak valid.");
+            } catch (Exception ex) {
+                showAlert(Alert.AlertType.ERROR,
+                    "Error", ex.getMessage());
+            }
+        }
+    });
+}
+    
     /**
      * Tandai pinjaman sebagai lunas.
      *
@@ -394,6 +467,53 @@ public class LoanPanel {
                     "Berhasil", "Pinjaman berhasil ditandai lunas.");
             }
         });
+    }
+    
+    /**
+     * Memproses persetujuan atau penolakan pinjaman oleh Admin.
+     */
+    private void processLoanApproval(Loan loan, boolean isApprove) {
+        String adminUsername = "Admin"; // Fallback default username admin
+        
+        if (isApprove) {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Konfirmasi Persetujuan");
+            confirm.setHeaderText("Setujui Pengajuan Pinjaman?");
+            confirm.setContentText("Pinjaman " + loan.getLoanId() + " sebesar Rp " 
+                    + String.format("%,.0f", loan.getPrincipal()) + " akan diaktifkan.");
+            
+            confirm.showAndWait().ifPresent(result -> {
+                if (result == ButtonType.OK) {
+                    try {
+                        bankService.approveLoan(loan.getLoanId(), adminUsername);
+                        refreshData();
+                        showAlert(Alert.AlertType.INFORMATION, "Berhasil", "Pinjaman berhasil disetujui dan berstatus AKTIF.");
+                    } catch (Exception ex) {
+                        showAlert(Alert.AlertType.ERROR, "Error", ex.getMessage());
+                    }
+                }
+            });
+        } else {
+            // Jika REJECT, wajib memunculkan TextInputDialog untuk mengisi alasan penolakan
+            TextInputDialog dialog = new TextInputDialog();
+            dialog.setTitle("Penolakan Pinjaman");
+            dialog.setHeaderText("Alasan Penolakan Pinjaman " + loan.getLoanId());
+            dialog.setContentText("Masukkan alasan penolakan:");
+
+            dialog.showAndWait().ifPresent(reason -> {
+                if (reason.trim().isEmpty()) {
+                    showAlert(Alert.AlertType.ERROR, "Error", "Alasan penolakan wajib diisi!");
+                    return;
+                }
+                try {
+                    bankService.rejectLoan(loan.getLoanId(), adminUsername, reason.trim());
+                    refreshData();
+                    showAlert(Alert.AlertType.INFORMATION, "Berhasil", "Pengajuan pinjaman resmi ditolak.");
+                } catch (Exception ex) {
+                    showAlert(Alert.AlertType.ERROR, "Error", ex.getMessage());
+                }
+            });
+        }
     }
 
     private void showAlert(Alert.AlertType type,

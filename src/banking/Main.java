@@ -77,6 +77,15 @@ public class Main extends Application {
     // Tampilkan LoginScreen
     banking.ui.SceneManager.getInstance().showLogin();
 
+    // Panggil tepat setelah view NasabahPanel di-load ke screen
+    // Mengambil customer ID langsung dari AuthService yang sedang aktif
+    String activeCustomerId = banking.service.AuthService.getInstance().getCurrentCustomer() != null 
+        ? banking.service.AuthService.getInstance().getCurrentCustomer().getCustomerId() 
+        : null;
+
+    if (activeCustomerId != null) {
+        banking.service.AlertService.showAlertsIfAny(primaryStage, activeCustomerId);
+    }
     primaryStage.show();
     System.out.println("NusaBank started successfully.");
 }

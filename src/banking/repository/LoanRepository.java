@@ -5,6 +5,7 @@
 package banking.repository;
 
 import banking.model.Loan;
+import banking.model.enums.LoanType;
 import banking.model.enums.LoanStatus;
 import banking.util.AppConfig;
 import banking.util.CsvUtil;
@@ -49,9 +50,24 @@ public class LoanRepository {
                 String description     = row[8].trim();
 
                 loans.add(new Loan(
-                    loanId, customerId, principal, monthlyPayment,
-                    tenorMonths, paidMonths, status, startDate, description
+                    row[0].trim(),  // loanId
+                    row[1].trim(),  // customerId
+                    Double.parseDouble(row[2].trim()),  // principal
+                    Double.parseDouble(row[3].trim()),  // monthlyPayment
+                    Integer.parseInt(row[4].trim()),    // tenorMonths
+                    Integer.parseInt(row[5].trim()),    // paidMonths
+                    LoanStatus.valueOf(row[6].trim()),  // status
+                    row[7].trim(),  // startDate
+                    row[8].trim(),  // description
+                    // Field baru — pakai default jika CSV lama (kurang dari 15 kolom)
+                    row.length > 9  ? Double.parseDouble(row[9].trim())  : 12.0,
+                    row.length > 10 ? LoanType.valueOf(row[10].trim())   : LoanType.FLAT,
+                    row.length > 11 ? Double.parseDouble(row[11].trim()) : 0.0,
+                    row.length > 12 ? row[12].trim() : "",
+                    row.length > 13 ? row[13].trim() : "",
+                    row.length > 14 ? row[14].trim() : ""
                 ));
+                
             } catch (IllegalArgumentException e) {
                 System.err.println("Error parsing loan row: " + e.getMessage());
             }
