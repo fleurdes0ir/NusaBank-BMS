@@ -6,8 +6,11 @@ package banking.service;
 
 import banking.model.*;
 import banking.model.enums.*;
+import banking.model.enums.LoanType;
 import banking.repository.*;
 import banking.util.CsvUtil;
+import banking.util.LoanCalculator;
+import banking.util.ValidationUtil;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -88,28 +91,40 @@ public class BankService {
      * @return objek Customer yang baru dibuat
      */
     public Customer createCustomer(String fullName, String email,
-            String phone, String address,
-            String username, String password) {
+        String phone, String address,
+        String username, String password) {
 
-        // Generate ID berurutan: C001, C002, dst
+        // Validation layer
+        ValidationUtil.validateFullName(fullName);
+        fullName = fullName.trim();
+        ValidationUtil.validateFullName(fullName);
+        ValidationUtil.validateEmail(email);
+        ValidationUtil.validatePhone(phone);
+        ValidationUtil.validateUsername(username);
+        ValidationUtil.validatePassword(password);
+        address   = ValidationUtil.sanitizeDescription(
+                    address, "Alamat", 200);
+
+        // Cek duplikasi username
+        if (userRepository.findByUsername(username) != null)
+            throw new IllegalArgumentException(
+                "Username '" + username + "' sudah digunakan.");
+
         String customerId = CsvUtil.generateId("C",
                 customerRepository.count() + 1);
-
         String today = LocalDate.now().format(DATE_FORMAT);
 
-        // Buat objek Customer baru
         Customer customer = new Customer(
-                customerId, fullName, email, phone, address, today);
+                customerId, fullName.trim(), email.trim(),
+                phone.trim(), address, today);
         customerRepository.save(customer);
 
-        // Buat User account untuk Customer ini
-        String userId = CsvUtil.generateId("U",
+        String userId       = CsvUtil.generateId("U",
                 userRepository.count() + 1);
-        // Hash password sebelum disimpan — TIDAK PERNAH simpan plaintext
         String passwordHash = CsvUtil.hashPassword(password);
 
-        User user = new User(userId, username, passwordHash,
-                UserRole.CUSTOMER, customerId);
+        User user = new User(userId, username.trim(),
+                passwordHash, UserRole.CUSTOMER, customerId);
         userRepository.save(user);
 
         return customer;
@@ -330,18 +345,17 @@ public class BankService {
      * @throws IllegalArgumentException jika rekening tidak ditemukan atau
      * amount tidak valid
      */
+    
     public void deposit(String accountId, double amount) {
-        Account account = getAccountOrThrow(accountId);
+     // Validation
+     ValidationUtil.validateDepositAmount(amount);
 
-        // Panggil method deposit() — validasi ada di dalam objek Account
-        account.deposit(amount);
+     Account account = getAccountOrThrow(accountId);
+     account.deposit(amount);
+     accountRepository.update(account);
 
-        // Simpan perubahan saldo
-        accountRepository.update(account);
-
-        // Catat transaksi
-        recordTransaction(accountId, TransactionType.DEPOSIT,
-                amount, "Deposit tunai", null);
+     recordTransaction(accountId, TransactionType.DEPOSIT,
+             amount, "Deposit tunai", null);
     }
 
     /**
@@ -357,9 +371,10 @@ public class BankService {
      * @throws IllegalArgumentException jika validasi gagal
      */
     public void withdraw(String accountId, double amount) {
-        Account account = getAccountOrThrow(accountId);
+    // Validation
+        ValidationUtil.validateWithdrawalAmount(amount);
 
-        // withdraw() di-override di tiap subclass — polymorphism
+        Account account = getAccountOrThrow(accountId);
         account.withdraw(amount);
         accountRepository.update(account);
 
@@ -381,20 +396,22 @@ public class BankService {
      * @throws IllegalArgumentException jika rekening tidak ditemukan atau
      * validasi gagal
      */
+    
     public void transfer(String sourceAccountId,
-            String targetAccountId, double amount) {
+        String targetAccountId, double amount) {
+
+        // Validation
+        ValidationUtil.validateTransferAmount(amount);
+        ValidationUtil.validateDifferentAccounts(
+                sourceAccountId, targetAccountId);
 
         Account source = getAccountOrThrow(sourceAccountId);
         Account target = getAccountOrThrow(targetAccountId);
 
-        // transfer() di Account sudah handle withdraw source + deposit target
         source.transfer(amount, target);
-
-        // Simpan perubahan saldo kedua rekening
         accountRepository.update(source);
         accountRepository.update(target);
 
-        // Catat dua sisi transaksi
         recordTransaction(sourceAccountId, TransactionType.TRANSFER_OUT,
                 amount, "Transfer ke " + targetAccountId, targetAccountId);
         recordTransaction(targetAccountId, TransactionType.TRANSFER_IN,
@@ -474,38 +491,113 @@ public class BankService {
      * @throws IllegalArgumentException jika Customer tidak ditemukan
      */
     public Loan applyLoan(String customerId, double principal,
-            int tenorMonths, String description) {
+        int tenorMonths, String description,
+        double annualRate, LoanType loanType) {
 
-        Customer customer = customerRepository.findById(customerId);
-        if (customer == null) {
+    // Validation
+    Customer customer = customerRepository.findById(customerId);
+    if (customer == null)
+        throw new IllegalArgumentException(
+            "Customer tidak ditemukan: " + customerId);
+
+    ValidationUtil.validateLoanPrincipal(principal);
+    ValidationUtil.validateLoanTenor(tenorMonths);
+    ValidationUtil.validateInterestRate(annualRate);
+    description = ValidationUtil.sanitizeDescription(
+            description, "Keterangan pinjaman", 100);
+
+    String loanId = CsvUtil.generateId("L",
+            loanRepository.count() + 1);
+    String today = LocalDate.now().format(DATE_FORMAT);
+
+    // Hitung cicilan berdasarkan metode yang dipilih
+    double monthlyPayment = LoanCalculator.calculateMonthly(
+            loanType, principal, annualRate, tenorMonths);
+    double totalPayment = LoanCalculator.calculateTotalPayment(
+            loanType, principal, annualRate, tenorMonths);
+
+    Loan loan = new Loan(
+        loanId, customerId, principal,
+        monthlyPayment, tenorMonths, 0,
+        LoanStatus.PENDING,
+        today, description,
+        annualRate, loanType, totalPayment,
+        "", "", ""
+    );
+
+    loanRepository.save(loan);
+    return loan;
+}
+    
+        /**
+     * Approve pinjaman yang sedang PENDING.
+     * Hanya Admin yang boleh memanggil method ini.
+     *
+     * @param loanId      ID pinjaman yang di-approve
+     * @param approvedBy  username admin yang menyetujui
+     * @throws IllegalArgumentException jika pinjaman tidak ditemukan
+     *         atau statusnya bukan PENDING
+     */
+    public void approveLoan(String loanId, String approvedBy) {
+        Loan loan = loanRepository.findById(loanId);
+        if (loan == null)
             throw new IllegalArgumentException(
-                    "Customer tidak ditemukan: " + customerId);
-        }
-
-        if (principal <= 0) {
+                "Pinjaman tidak ditemukan: " + loanId);
+        if (loan.getStatus() != LoanStatus.PENDING)
             throw new IllegalArgumentException(
-                    "Jumlah pinjaman harus lebih dari 0.");
-        }
+                "Hanya pinjaman berstatus PENDING yang bisa disetujui. "
+                + "Status saat ini: " + loan.getStatus().getDisplayName());
 
-        if (tenorMonths <= 0) {
-            throw new IllegalArgumentException(
-                    "Tenor harus lebih dari 0 bulan.");
-        }
+        loan.setStatus(LoanStatus.ACTIVE);
+        loan.setApprovedBy(approvedBy);
+        loan.setApprovedDate(LocalDate.now().format(DATE_FORMAT));
+        loan.setRejectionReason("");
 
-        String loanId = CsvUtil.generateId("L",
-                loanRepository.count() + 1);
-        String today = LocalDate.now().format(DATE_FORMAT);
-
-        // Kalkulasi cicilan flat rate
-        double monthlyPayment = principal / tenorMonths;
-
-        Loan loan = new Loan(loanId, customerId, principal,
-                monthlyPayment, tenorMonths, 0,
-                LoanStatus.ACTIVE, today, description);
-
-        loanRepository.save(loan);
-        return loan;
+        loanRepository.update(loan);
     }
+
+    /**
+     * Reject pinjaman yang sedang PENDING.
+     *
+     * @param loanId          ID pinjaman yang ditolak
+     * @param rejectedBy      username admin yang menolak
+     * @param rejectionReason alasan penolakan (wajib diisi)
+     */
+    public void rejectLoan(String loanId, String rejectedBy,
+            String rejectionReason) {
+
+        ValidationUtil.validateRejectionReason(rejectionReason);
+
+        Loan loan = loanRepository.findById(loanId);
+        if (loan == null)
+            throw new IllegalArgumentException(
+                "Pinjaman tidak ditemukan: " + loanId);
+        if (loan.getStatus() != LoanStatus.PENDING)
+            throw new IllegalArgumentException(
+                "Hanya pinjaman berstatus PENDING yang bisa ditolak. "
+                + "Status saat ini: " + loan.getStatus().getDisplayName());
+
+        loan.setStatus(LoanStatus.REJECTED);
+        
+        // Pinjaman ditolak, maka data Approval harus dikosongkan/diisi penanda ditolak
+        loan.setApprovedBy(rejectedBy); 
+        loan.setApprovedDate("-"); // Jangan diisi tanggal aktif agar tidak dikira pinjaman sukses oleh AlertService!
+        loan.setRejectionReason(rejectionReason);
+
+        loanRepository.update(loan);
+    }
+
+    /**
+     * Override calculateMonthlyPayment lama — sekarang support
+     * dua metode bunga.
+     *
+     * @param loanType    FLAT atau ANNUITY
+     * @param principal   pokok pinjaman
+     * @param annualRate  suku bunga tahunan dalam persen
+     * @param tenorMonths tenor dalam bulan
+     * @return cicilan bulanan
+     */
+
 
     /**
      * Mengambil semua pinjaman milik satu Customer.
@@ -513,6 +605,7 @@ public class BankService {
      * @param customerId ID Customer
      * @return List pinjaman
      */
+    
     public List<Loan> getLoansByCustomerId(String customerId) {
         return loanRepository.findByCustomerId(customerId);
     }
@@ -560,6 +653,17 @@ public class BankService {
         return principal / tenorMonths;
     }
 
+    /**
+     * Overload calculateMonthlyPayment baru — Mendukung metode bunga
+     * FLAT atau ANNUITY dengan mendelegasikan ke LoanCalculator utility.
+     * * Tambahkan method ini untuk memperbaiki error di LoanPanel dan NasabahPanel!
+     */
+    public double calculateMonthlyPayment(LoanType loanType, double principal, 
+                                          double annualRate, int tenorMonths) {
+        // Mendelegasikan kalkulasi secara aman ke kelas utility LoanCalculator
+        return LoanCalculator.calculateMonthly(loanType, principal, annualRate, tenorMonths);
+    }
+    
     // =========================================================
     // DASHBOARD STATISTICS
     // =========================================================
@@ -643,6 +747,12 @@ public class BankService {
                 today, description, targetAccountId);
 
         transactionRepository.save(tx);
+        
+        // ── [FIX SOLUSI STRUK GANDA] ──
+        // Hanya cetak struk otomatis jika tipe transaksi BUKAN dana masuk (TRANSFER_IN)
+        if (type != TransactionType.TRANSFER_IN) {
+            banking.util.ReceiptService.generateAndOpenReceipt(tx);
+        }
     }
 
     // =========================================================

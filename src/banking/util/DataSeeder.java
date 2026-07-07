@@ -6,6 +6,7 @@ package banking.util;
 
 import banking.model.*;
 import banking.model.enums.*;
+import banking.model.enums.LoanType;
 import banking.repository.*;
 import java.io.File;
 
@@ -242,20 +243,26 @@ public class DataSeeder {
     private void seedLoans() {
         // Budi — pinjaman personal 24 bulan
         // monthlyPayment = 50_000_000 / 24 = 2_083_333
+        // Pinjaman pertama — Budi Santoso
         loanRepository.save(new Loan(
-                "L001", "C001", 50_000_000,
-                2_083_333, 24, 8,
-                LoanStatus.ACTIVE, "2024-01-15",
-                "Pinjaman Personal"
+            "L001", "C001", 50_000_000,
+            2_083_333, 24, 8,
+            LoanStatus.ACTIVE, "2024-01-15",
+            "Pinjaman Personal",
+            12.0, LoanType.FLAT,
+            50_000_000 + (50_000_000 * 0.12 * 2),
+            "admin", "2024-01-15", ""
         ));
 
-        // Agus — pinjaman modal usaha 12 bulan
-        // monthlyPayment = 20_000_000 / 12 = 1_666_667
+        // Pinjaman kedua — Agus Setiawan
         loanRepository.save(new Loan(
-                "L002", "C003", 20_000_000,
-                1_666_667, 12, 3,
-                LoanStatus.ACTIVE, "2024-03-10",
-                "Modal Usaha"
+            "L002", "C003", 20_000_000,
+            1_666_667, 12, 3,
+            LoanStatus.ACTIVE, "2024-03-10",
+            "Modal Usaha",
+            12.0, LoanType.FLAT,
+            20_000_000 + (20_000_000 * 0.12 * 1),
+            "admin", "2024-03-10", ""
         ));
 
         System.out.println("✓ Loans seeded");

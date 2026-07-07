@@ -181,6 +181,9 @@ public class LoginScreen {
      * @param passwordField field password
      * @param errorLabel    label untuk menampilkan error
      */
+    /**
+     * Menangani logika login saat tombol ditekan.
+     */
     private void handleLogin(TextField usernameField,
             PasswordField passwordField, Label errorLabel) {
 
@@ -197,9 +200,24 @@ public class LoginScreen {
         boolean success = AuthService.getInstance().login(username, password);
 
         if (success) {
+            // ── HUBUNGKAN PEMICU POP-UP ALERT DI SINI ──
+            try {
+                // Pastikan yang login saat ini adalah Nasabah (bukan Admin)
+                if (AuthService.getInstance().getCurrentCustomer() != null) {
+                    String customerId = AuthService.getInstance().getCurrentCustomer().getCustomerId();
+                    
+                    // Ambil Stage utama JavaFX secara dinamis dari root window scene aktif
+                    javafx.stage.Stage mainStage = (javafx.stage.Stage) scene.getWindow();
+                    
+                    // Panggil paksa pengecekan alert agar pop-up notifikasi melompat keluar
+                    banking.service.AlertService.showAlertsIfAny(mainStage, customerId);
+                }
+            } catch (Exception ex) {
+                System.err.println("[DEBUG ERROR] Gagal memuat pop-up notifikasi saat login: " + ex.getMessage());
+            }
+            // ──────────────────────────────────────────
+
             // Login berhasil — navigasi ke MainScreen
-            // Platform.runLater tidak diperlukan karena kita sudah
-            // di JavaFX Application Thread (dipanggil dari event handler)
             SceneManager.getInstance().showMain();
         } else {
             // Login gagal — tampilkan error, kosongkan password
